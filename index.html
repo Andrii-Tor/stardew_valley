@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stardew Valley — Клуб</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --wood-dark: #45200d;
+    --wood-mid: #7c3f1c;
+    --wood-light: #c47d3e;
+    --parchment: #f9eab8;
+    --card-bg: #fff6d6;
+    --gold: #ffcc00;
+    --green: #22c55e;
+  }
+  * { box-sizing: border-box; user-select: none; }
+  body {
+    margin: 0;
+    background: #12161f;
+    color: #3b1704;
+    font-family: 'Rubik', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 16px;
+  }
+
+  .club-map-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 1150px;
+    aspect-ratio: 1000 / 426;
+    background: #000;
+    border: 6px solid var(--wood-dark);
+    border-radius: 12px;
+    box-shadow: 0 0 0 3px var(--wood-light), 0 16px 40px rgba(0,0,0,0.85);
+    overflow: hidden;
+  }
+
+  .club-base-img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    image-rendering: pixelated;
+  }
+
+  .room-overlay {
+    position: absolute;
+    transition: opacity 0.5s ease;
+    pointer-events: none;
+  }
+  .room-overlay img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    image-rendering: pixelated;
+  }
+  .room-overlay.restored { opacity: 0; }
+
+  #ov-crafts   { left: 10.1%; top: 47.65%; width: 20.0%; height: 52.35%; }
+  #ov-pantry   { left: 16.5%; top: 0.0%;   width: 13.3%; height: 36.4%; }
+  #ov-fishtank { left: 52.7%; top: 13.6%;  width: 13.8%; height: 30.3%; }
+  #ov-vault    { left: 66.9%; top: 0.0%;   width: 22.9%; height: 30.8%; }
+  #ov-boiler   { left: 76.9%; top: 31.9%;  width: 23.1%; height: 40.1%; }
+  #ov-bulletin { left: 65.0%; top: 32.9%;  width: 8.8%;  height: 11.0%; }
+
+  #ov-joja     { left: 65.6%; top: 53.5%;  width: 13.8%; height: 32.8%; }
+
+  .box-hotspot {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    width: 1.6%;
+    height: 3.6%;
+    border: 2px solid var(--gold);
+    border-radius: 3px;
+    background: rgba(255, 204, 0, 0.2);
+    box-shadow: 0 0 8px var(--gold);
+    cursor: pointer;
+    z-index: 10;
+    animation: pulseBox 1.8s infinite;
+  }
+  .box-hotspot:hover {
+    background: rgba(255, 204, 0, 0.55);
+    transform: translate(-50%, -50%) scale(1.18);
+  }
+  .box-hotspot.bulletin-hotspot { width: 6.5%; height: 8.5%; }
+  .box-hotspot.completed-box {
+    border-color: var(--green);
+    background: rgba(34, 197, 94, 0.35);
+    box-shadow: 0 0 10px var(--green);
+    animation: none;
+  }
+  @keyframes pulseBox {
+    0%, 100% { box-shadow: 0 0 6px var(--gold); }
+    50%      { box-shadow: 0 0 16px #fff, 0 0 22px var(--gold); }
+  }
+
+  /* Модальне вікно */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.76);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 16px;
+  }
+  .modal-backdrop.open { display: flex; }
+
+  .modal-window {
+    width: 100%;
+    max-width: 840px;
+    max-height: 88vh;
+    background: var(--parchment);
+    border: 6px solid var(--wood-dark);
+    border-radius: 10px;
+    box-shadow: 0 0 0 4px var(--wood-light), 0 20px 50px rgba(0,0,0,0.85);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .modal-header {
+    background: var(--wood-mid);
+    color: #fff5d6;
+    padding: 12px 18px;
+    border-bottom: 4px solid var(--wood-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .modal-header-left {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .modal-header h2 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.45);
+  }
+  .room-reward-badge {
+    background: rgba(0,0,0,0.28);
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--wood-light);
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #fde68a;
+  }
+  .room-reward-badge a {
+    color: #fff;
+    text-decoration: underline;
+    font-weight: 700;
+  }
+  .close-btn {
+    background: #b91c1c;
+    color: #fff;
+    border: 2px solid #ffd8d8;
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    font-weight: 800;
+    font-size: 1rem;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .modal-body {
+    padding: 14px;
+    overflow-y: auto;
+  }
+
+  .bundle-section {
+    background: var(--card-bg);
+    border: 3px solid var(--wood-light);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+  }
+  .bundle-header-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 2px dashed #d6b88a;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+  }
+  .bundle-icon-ui {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+    image-rendering: pixelated;
+  }
+  .bundle-title {
+    font-weight: 800;
+    font-size: 1.05rem;
+    flex: 1;
+    color: var(--wood-dark);
+  }
+  .bundle-progress-badge {
+    font-weight: 800;
+    font-size: 0.92rem;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: rgba(0,0,0,0.06);
+  }
+
+  .items-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
+    gap: 8px;
+  }
+
+  .item-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 9px;
+    border: 2px solid #d4b483;
+    border-radius: 8px;
+    background: #fbf0c9;
+    transition: all 0.15s;
+  }
+  .item-row.checked {
+    border-color: var(--green);
+    background: #dcfce7;
+  }
+  .item-icon-btn {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    border: 2px solid var(--wood-mid);
+    border-radius: 6px;
+    background: #fffdf7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .item-icon-btn:hover {
+    border-color: var(--wood-dark);
+    transform: scale(1.05);
+  }
+  .item-icon-btn img.main-sprite {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    image-rendering: pixelated;
+  }
+  .quality-star {
+    position: absolute;
+    bottom: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    image-rendering: pixelated;
+    pointer-events: none;
+  }
+  .check-badge {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #b8a68e;
+    color: #fff;
+    font-size: 11px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #fff;
+    opacity: 0.4;
+    transition: all 0.15s;
+  }
+  .item-row.checked .check-badge {
+    background: var(--green);
+    opacity: 1;
+    box-shadow: 0 0 5px var(--green);
+  }
+
+  .item-details { flex: 1; min-width: 0; }
+  .item-link {
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: #6b2106;
+    text-decoration: none;
+    display: block;
+    line-height: 1.2;
+    margin-bottom: 2px;
+  }
+  .item-link:hover { text-decoration: underline; color: #b45309; }
+  .item-where {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #5c4028;
+    line-height: 1.25;
+  }
+
+  .bundle-reward-footer {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px dashed #d6b88a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #45200d;
+  }
+  .reward-icon-sm {
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
+    image-rendering: pixelated;
+  }
+  .reward-link {
+    color: #9a3412;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .reward-link:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div class="club-map-wrapper">
+  <img src="img/rooms/повне фото.webp" class="club-base-img" alt="Клуб">
+
+  <div class="room-overlay" id="ov-crafts"><img src="img/rooms/Комната искусств в начале игры.webp" alt="Комната искусств"></div>
+  <div class="room-overlay" id="ov-pantry"><img src="img/rooms/Кладовая в начале игры.webp" alt="Кладовая"></div>
+  <div class="room-overlay" id="ov-fishtank"><img src="img/rooms/Аквариум в начале игры.webp" alt="Аквариум"></div>
+  <div class="room-overlay" id="ov-vault"><img src="img/rooms/Сейф в начале игры.webp" alt="Сейф"></div>
+  <div class="room-overlay" id="ov-boiler"><img src="img/rooms/Бойлерная в начале игры.webp" alt="Бойлерная"></div>
+  <div class="room-overlay" id="ov-bulletin"><img src="img/rooms/Доска объявлений до восстановления клуба.png" alt="Доска объявлений"></div>
+  <div class="room-overlay" id="ov-joja"><img src="img/rooms/Пропавший узелок.png" alt="Заброшенный ДжоджаМарт"></div>
+
+  <div class="box-hotspot" id="box-crafts" style="left: 20.95%; top: 79.8%;" onclick="openRoomModal('crafts')" title="Комната искусств"></div>
+  <div class="box-hotspot" id="box-pantry" style="left: 20.95%; top: 17.5%;" onclick="openRoomModal('pantry')" title="Кладовая"></div>
+  <div class="box-hotspot" id="box-fishtank" style="left: 59.75%; top: 35.0%;" onclick="openRoomModal('fishtank')" title="Аквариум"></div>
+  <div class="box-hotspot" id="box-vault" style="left: 82.1%; top: 21.2%;" onclick="openRoomModal('vault')" title="Сейф"></div>
+  <div class="box-hotspot" id="box-boiler" style="left: 94.05%; top: 49.2%;" onclick="openRoomModal('boiler')" title="Бойлерная"></div>
+  <div class="box-hotspot bulletin-hotspot" id="box-bulletin" style="left: 69.2%; top: 38.0%;" onclick="openRoomModal('bulletin')" title="Доска объявлений"></div>
+  <div class="box-hotspot" id="box-joja" style="left: 72.1%; top: 69.1%;" onclick="openRoomModal('joja')" title="Пропавший узелок"></div>
+</div>
+
+<!-- Модальне вікно -->
+<div class="modal-backdrop" id="roomModal" onclick="if(event.target===this) closeRoomModal()">
+  <div class="modal-window">
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <h2 id="modalTitle">Комната</h2>
+        <div class="room-reward-badge" id="modalRoomReward"></div>
+      </div>
+      <button class="close-btn" onclick="closeRoomModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+const WIKI_BASE = "https://ru.stardewvalleywiki.com/";
+
+const ROOMS = {
+  crafts: {
+    title: "Комната искусств",
+    roomRewardName: "Ремонт моста (Карьер)",
+    roomRewardWiki: "Карьер",
+    folder: "Комната искусств",
+    ext: "webp",
+    bundles: [
+      {
+        name: "Узелок весенних дикоросов", req: 4, uiIcon: "Узелок весенних дикоросов.webp",
+        items: [
+          { id: "c1", name: "Дикий хрен", where: "Весной в долине" },
+          { id: "c2", name: "Нарцисс", where: "Весной в долине, у Пьера на Цветочных танцах" },
+          { id: "c3", name: "Лук-порей", where: "Весной в долине" },
+          { id: "c4", name: "Одуванчик", where: "Весной в долине, у Пьера на Цветочных танцах" }
+        ],
+        rewardName: "Весенние семена (30)", rewardWiki: "Весенние_семена", rewardFile: "Весенние семена"
+      },
+      {
+        name: "Узелок летних дикоросов", req: 3, uiIcon: "Узелок летних дикоросов.webp",
+        items: [
+          { id: "c5", name: "Виноград", where: "Летом в долине, выращивается осенью" },
+          { id: "c6", name: "Острая ягода", where: "Летом в долине, пещера на ферме (летучие мыши)" },
+          { id: "c7", name: "Душистый горошек", where: "Летом в долине" }
+        ],
+        rewardName: "Летние семена (30)", rewardWiki: "Летние_семена", rewardFile: "Летние семена"
+      },
+      {
+        name: "Узелок осенних дикоросов", req: 4, uiIcon: "Узелок осенних дикоросов.webp",
+        items: [
+          { id: "c8", name: "Шампиньон", where: "Осенью в долине, Тайный лес, пещера с грибами" },
+          { id: "c9", name: "Дикая слива", where: "Осенью в долине, пещера (летучие мыши)" },
+          { id: "c10", name: "Фундук", where: "Осенью в долине" },
+          { id: "c11", name: "Ежевика", where: "Осенью в долине, пещера (летучие мыши)" }
+        ],
+        rewardName: "Осенние семена (30)", rewardWiki: "Осенние_семена", rewardFile: "Осенние семена"
+      },
+      {
+        name: "Узелок зимних дикоросов", req: 4, uiIcon: "Узелок зимних дикоросов.webp",
+        items: [
+          { id: "c12", name: "Зимний корень", where: "Вскапывание земли зимой, синие слаймы (41–79 ур.)" },
+          { id: "c13", name: "Кристальный фрукт", where: "Зимой в долине, пыльные духи (41–79 ур.)" },
+          { id: "c14", name: "Снежный батат", where: "Вскапывание земли зимой" },
+          { id: "c15", name: "Крокус", where: "Зимой в долине" }
+        ],
+        rewardName: "Зимние семена (30)", rewardWiki: "Зимние_семена", rewardFile: "Зимние семена"
+      },
+      {
+        name: "Строительный узелок", req: 4, uiIcon: "Строительный узелок.webp",
+        items: [
+          { id: "c16", name: "Древесина (99)", file: "Древесина", where: "Рубка деревьев и веток топором, у Робин" },
+          { id: "c17", name: "Древесина (99)", file: "Древесина", where: "Рубка деревьев и веток топором, у Робин" },
+          { id: "c18", name: "Камень (99)", file: "Камень", where: "Разбивание камней киркой, у Робин" },
+          { id: "c19", name: "Твёрдая древесина (10)", file: "Твёрдая древесина", where: "Большие пни и брёвна, Тайный лес" }
+        ],
+        rewardName: "Углевыжигательная печь (1)", rewardWiki: "Углевыжигательная_печь", rewardFile: "Углевыжигательная печь"
+      },
+      {
+        name: "Узелок заготовки экзотики", req: 5, uiIcon: "Узелок заготовки экзотики.webp",
+        items: [
+          { id: "c20", name: "Кокос", where: "Пустыня Калико, пальмы" },
+          { id: "c21", name: "Плод кактуса", where: "Пустыня Калико, магазин «Оазис»" },
+          { id: "c22", name: "Пещерная морковка", where: "Ящики и копание земли в шахте" },
+          { id: "c23", name: "Красный гриб", where: "Шахта, Тайный лес, пещера с грибами" },
+          { id: "c24", name: "Фиолетовый гриб", where: "Шахта (81+ ур.), пещера с грибами" },
+          { id: "c25", name: "Кленовый сироп", where: "Подсочник на клёне" },
+          { id: "c26", name: "Дубовая смола", where: "Подсочник на дубе" },
+          { id: "c27", name: "Сосновая смола", where: "Подсочник на сосне" },
+          { id: "c28", name: "Сморчок", where: "Тайный лес весной, пещера с грибами" }
+        ],
+        rewardName: "«Дары осени» (5)", rewardWiki: "«Дары_осени»", rewardFile: "Дары осени"
+      }
+    ]
+  },
+  pantry: {
+    title: "Кладовая",
+    roomRewardName: "Теплица",
+    roomRewardWiki: "Теплица",
+    folder: "Кладовая",
+    ext: "png",
+    bundles: [
+      {
+        name: "Узелок весеннего урожая", req: 4, uiIcon: "Узелок весеннего урожая.png",
+        items: [
+          { id: "p1", name: "Пастернак", where: "Весенняя культура (4 дня)" },
+          { id: "p2", name: "Зеленая фасоль", where: "Весенняя культура (10 дней)" },
+          { id: "p3", name: "Цветная капуста", where: "Весенняя культура (12 дней)" },
+          { id: "p4", name: "Картофель", where: "Весенняя культура (6 дней)" }
+        ],
+        rewardName: "СкороРост (20)", rewardWiki: "СкороРост", rewardFile: "СкороРост"
+      },
+      {
+        name: "Узелок летнего урожая", req: 4, uiIcon: "Узелок летнего урожая.png",
+        items: [
+          { id: "p5", name: "Помидор", where: "Летняя культура (11 дней)" },
+          { id: "p6", name: "Жгучий перец", where: "Летняя культура (5 дней)" },
+          { id: "p7", name: "Черника", where: "Летняя культура (13 дней)" },
+          { id: "p8", name: "Дыня", where: "Летняя культура (12 дней)" }
+        ],
+        rewardName: "Высококачественный спринклер (1)", rewardWiki: "Высококачественный_спринклер", rewardFile: "Высококачественный спринклер"
+      },
+      {
+        name: "Узелок осеннего урожая", req: 4, uiIcon: "Узелок осеннего урожая.png",
+        items: [
+          { id: "p9", name: "Кукуруза", where: "Летняя / осенняя культура (14 дней)" },
+          { id: "p10", name: "Баклажан", where: "Осенняя культура (5 дней)" },
+          { id: "p11", name: "Тыква", where: "Осенняя культура (13 дней)" },
+          { id: "p12", name: "Батат", where: "Осенняя культура (10 дней)" }
+        ],
+        rewardName: "Улей (1)", rewardWiki: "Улей", rewardFile: "Улей"
+      },
+      {
+        name: "Узелок отборного урожая", req: 3, uiIcon: "Узелок отборного урожая.png",
+        items: [
+          { id: "p13", name: "Пастернак (5)", file: "Пастернак", quality: "gold", where: "5 шт. золотого качества (Весна)" },
+          { id: "p14", name: "Дыня (5)", file: "Дыня", quality: "gold", where: "5 шт. золотого качества (Лето)" },
+          { id: "p15", name: "Тыква (5)", file: "Тыква", quality: "gold", where: "5 шт. золотого качества (Осень)" },
+          { id: "p16", name: "Кукуруза (5)", file: "Кукуруза", quality: "gold", where: "5 шт. золотого качества (Лето/Осень)" }
+        ],
+        rewardName: "Кадка (1)", rewardWiki: "Кадка", rewardFile: "Кадка"
+      },
+      {
+        name: "Животноводческий узелок", req: 5, uiIcon: "Животноводческий узелок.png",
+        items: [
+          { id: "p17", name: "Бидон молока", where: "Коровы" },
+          { id: "p18", name: "Большое яйцо (коричневое)", file: "Большое яйцо (коричневое)", wiki: "Большое_яйцо", where: "Коричневые курицы" },
+          { id: "p19", name: "Большое яйцо", file: "Большое яйцо", wiki: "Большое_яйцо", where: "Белые курицы" },
+          { id: "p20", name: "Бол. бутыль козьего молока", file: "Бол. бутыль козьего молока", wiki: "Большая_бутыль_козьего_молока", where: "Козы" },
+          { id: "p21", name: "Шерсть", where: "Овцы, кролики" },
+          { id: "p22", name: "Утиное яйцо", where: "Утки" }
+        ],
+        rewardName: "Пресс для сыра (1)", rewardWiki: "Пресс_для_сыра", rewardFile: "Пресс для сыра"
+      },
+      {
+        name: "Хозяйственный узелок", req: 6, uiIcon: "Хозяйственный узелок.png",
+        items: [
+          { id: "p23", name: "Трюфельное масло", where: "Пресс для масла (из трюфеля)" },
+          { id: "p24", name: "Ткань", where: "Прялка, мокрая газета, мумии" },
+          { id: "p25", name: "Козий сыр", where: "Пресс для сыра" },
+          { id: "p26", name: "Сыр", where: "Пресс для сыра" },
+          { id: "p27", name: "Мед", wiki: "Мёд", where: "Улей, Оазис" },
+          { id: "p28", name: "Джем", wiki: "Джемы_и_консервы", where: "Кадка (любой фрукт)" },
+          { id: "p29", name: "Яблоко", where: "Яблоня осенью, пещера (мыши)" },
+          { id: "p30", name: "Абрикос", where: "Абрикос весной, пещера (мыши)" },
+          { id: "p31", name: "Апельсин", where: "Апельсин летом, пещера (мыши)" },
+          { id: "p32", name: "Персик", where: "Персик летом, пещера (мыши)" },
+          { id: "p33", name: "Гранат", where: "Гранат осенью, пещера (мыши)" },
+          { id: "p34", name: "Вишня", where: "Вишня весной, пещера (мыши)" }
+        ],
+        rewardName: "Бочонок (1)", rewardWiki: "Бочонок", rewardFile: "Бочонок"
+      }
+    ]
+  },
+  fishtank: {
+    title: "Аквариум",
+    roomRewardName: "Устранение блестящего булыжника",
+    roomRewardWiki: "Медный_промывочный_ковш",
+    folder: "Аквариум",
+    ext: "png",
+    bundles: [
+      {
+        name: "Речной узелок", req: 4, uiIcon: "Речной узелок.png",
+        items: [
+          { id: "f1", name: "Солнечник", where: "Реки, 6:00–19:00, Весна/Лето (солнечно)" },
+          { id: "f2", name: "Сом", where: "Реки и Тайный лес, 6:00–0:00, Весна/Осень (дождь)" },
+          { id: "f3", name: "Шэд", where: "Реки, 9:00–2:00, Весна/Лето/Осень (дождь)" },
+          { id: "f4", name: "Тигровая форель", where: "Реки, 6:00–19:00, Осень/Зима" }
+        ],
+        rewardName: "Элитная наживка (30)", rewardWiki: "Элитная_наживка", rewardFile: "Элитная наживка"
+      },
+      {
+        name: "Озерный узелок", req: 4, uiIcon: "Озерный узелок.png",
+        items: [
+          { id: "f5", name: "Большеротый окунь", where: "Горное озеро, 6:00–19:00, весь год" },
+          { id: "f6", name: "Карп", where: "Горное озеро, Тайный лес, Канализация" },
+          { id: "f7", name: "Сомик", where: "Горное озеро, весь день, весь год" },
+          { id: "f8", name: "Осетр", wiki: "Осётр", where: "Горное озеро, 6:00–19:00, Лето/Зима" }
+        ],
+        rewardName: "Украшенный спиннер (1)", rewardWiki: "Украшенный_спиннер", rewardFile: "Украшенный спиннер"
+      },
+      {
+        name: "Океанский узелок", req: 4, uiIcon: "Океанский узелок.png",
+        items: [
+          { id: "f9", name: "Сардина", where: "Океан, 6:00–19:00, Весна/Осень/Зима" },
+          { id: "f10", name: "Тунец", where: "Океан, 6:00–19:00, Лето/Зима" },
+          { id: "f11", name: "Берикс", where: "Океан, 6:00–19:00, Лето/Осень (дождь)" },
+          { id: "f12", name: "Тиляпия", where: "Океан, 6:00–14:00, Лето/Осень" }
+        ],
+        rewardName: "Тотем-телепорт: Пляж (5)", rewardWiki: "Тотем-телепорт:_Пляж", rewardFile: "Тотем-телепорт, Пляж"
+      },
+      {
+        name: "Узелок ночной рыбалки", req: 3, uiIcon: "Узелок ночной рыбалки.png",
+        items: [
+          { id: "f13", name: "Желтый судак", wiki: "Жёлтый_судак", where: "Реки, озеро, пруд леса, 12:00–2:00, Осень (дождь)" },
+          { id: "f14", name: "Лещ", where: "Реки, 18:00–2:00, весь год" },
+          { id: "f15", name: "Угорь", where: "Океан, 16:00–2:00, Весна/Осень (дождь)" }
+        ],
+        rewardName: "Кольцо света (1)", rewardWiki: "Кольцо_света", rewardFile: "Кольцо света"
+      },
+      {
+        name: "Краболовный узелок", req: 5, uiIcon: "Краболовный узелок.png",
+        items: [
+          { id: "f16", name: "Омар", where: "Крабовая ловушка (океан)" },
+          { id: "f17", name: "Рак", where: "Крабовая ловушка (пресная вода)" },
+          { id: "f18", name: "Краб", where: "Крабовая ловушка (океан), крабы в шахте" },
+          { id: "f19", name: "Сердцевидка", where: "Ловушка (океан), сбор на пляже" },
+          { id: "f20", name: "Мидия", where: "Ловушка (океан), сбор на пляже" },
+          { id: "f21", name: "Креветка", where: "Крабовая ловушка (океан)" },
+          { id: "f22", name: "Улитка", where: "Крабовая ловушка (пресная вода)" },
+          { id: "f23", name: "Литорина", where: "Крабовая ловушка (пресная вода)" },
+          { id: "f24", name: "Устрица", where: "Ловушка (океан), сбор на пляже" },
+          { id: "f25", name: "Гребешок", where: "Ловушка (океан), сбор на пляже" }
+        ],
+        rewardName: "Крабовая ловушка (3)", rewardWiki: "Крабовая_ловушка", rewardFile: "Крабовая ловушка"
+      },
+      {
+        name: "Узелок особого улова", req: 4, uiIcon: "Узелок особого улова.png",
+        items: [
+          { id: "f26", name: "Иглобрюх", where: "Океан, 12:00–16:00, Лето (солнечно)" },
+          { id: "f27", name: "Пятнистый криворот", where: "Шахта (20 и 60 ур.), падает с призраков" },
+          { id: "f28", name: "Песковник", where: "Пруд в пустыне, 6:00–20:00" },
+          { id: "f29", name: "Лесоплюх", where: "Пруд в Тайном лесу, лесная ферма" }
+        ],
+        rewardName: "«Морское блюдо» (5)", rewardWiki: "«Морское_блюдо»", rewardFile: "«Морское блюдо»"
+      }
+    ]
+  },
+  boiler: {
+    title: "Бойлерная",
+    roomRewardName: "Ремонт вагонеток",
+    roomRewardWiki: "Вагонетки",
+    folder: "Бойлерная",
+    ext: "png",
+    bundles: [
+      {
+        name: "Кузнечный узелок", req: 3, uiIcon: "Кузнечный узелок.png",
+        items: [
+          { id: "b1", name: "Медный слиток", where: "Плавка медной руды в печи" },
+          { id: "b2", name: "Железный слиток", where: "Плавка железной руды в печи" },
+          { id: "b3", name: "Золотой слиток", where: "Плавка золотой руды в печи" }
+        ],
+        rewardName: "Плавильная печь (1)", rewardWiki: "Плавильная_печь", rewardFile: "Плавильная печь"
+      },
+      {
+        name: "Геологический узелок", req: 4, uiIcon: "Геологический узелок.png",
+        items: [
+          { id: "b4", name: "Кварц", where: "Все уровни шахты" },
+          { id: "b5", name: "Земляной кристалл", where: "Шахта (1–39 ур.), жеоды" },
+          { id: "b6", name: "Замерзшая слеза", where: "Шахта (41–79 ур.), морозные жеоды, пыльные духи" },
+          { id: "b7", name: "Огненный кварц", where: "Шахта (80–120 ур.), магма-жеоды" }
+        ],
+        rewardName: "Омнижеода (5)", rewardWiki: "Омнижеода", rewardFile: "Омнижеода"
+      },
+      {
+        name: "Узелок приключенца", req: 2, uiIcon: "Узелок приключенца.png",
+        items: [
+          { id: "b8", name: "Слизь (99)", file: "Слизь", wiki: "Слизь", where: "Убийство слаймов" },
+          { id: "b9", name: "Крыло летучей мыши (10)", file: "Крыло летучей мыши", wiki: "Крыло_летучей_мыши", where: "Летучие мыши в шахте и Пещере Черепа" },
+          { id: "b10", name: "Солнечная эссенция", where: "Призраки, мумии, покупка у Кробуса" },
+          { id: "b11", name: "Эссенция пустоты", where: "Теневые враги в шахте, покупка у Кробуса" }
+        ],
+        rewardName: "Малое кольцо-магнит (1)", rewardWiki: "Малое_кольцо-магнит", rewardFile: "Малое кольцо-магнит"
+      }
+    ]
+  },
+  bulletin: {
+    title: "Доска объявлений",
+    roomRewardName: "Дружба (+2 сердечка)",
+    roomRewardWiki: "Дружба",
+    folder: "Доска объявлений",
+    ext: "png",
+    bundles: [
+      {
+        name: "Поварской узелок", req: 6, uiIcon: "Поварской узелок.png",
+        items: [
+          { id: "bu1", name: "Кленовый сироп", where: "Подсочник на клёне" },
+          { id: "bu2", name: "Съедобный папоротник", where: "Тайный лес летом, Пещера Черепа" },
+          { id: "bu3", name: "Трюфель", where: "Свиньи на ферме" },
+          { id: "bu4", name: "Мак", where: "Летняя культура (7 дней)" },
+          { id: "bu5", name: "Суши-роллы", where: "Кухня (водоросли + рис + рыба)" },
+          { id: "bu6", name: "Яичница", where: "Кухня (любое яйцо)" }
+        ],
+        rewardName: "Розовый торт (3)", rewardWiki: "Розовый_торт", rewardFile: "Розовый торт"
+      },
+      {
+        name: "Красочный узелок", req: 6, uiIcon: "Красочный узелок.png",
+        items: [
+          { id: "bu7", name: "Красный гриб", where: "Шахта, Тайный лес, пещера с грибами" },
+          { id: "bu8", name: "Морской еж", wiki: "Морской_ёж", where: "Пляж (за мостом за 300 древесины)" },
+          { id: "bu9", name: "Подсолнух", where: "Летняя / осенняя культура (8 дней)" },
+          { id: "bu10", name: "Утиное перо", where: "Утки" },
+          { id: "bu11", name: "Аквамарин", where: "Шахта (40+ ур.), сундуки" },
+          { id: "bu12", name: "Красная капуста", where: "Летняя культура (у Пьера со 2-го года, торговка)" }
+        ],
+        rewardName: "Экстрактор семян (1)", rewardWiki: "Экстрактор_семян", rewardFile: "Экстрактор семян"
+      },
+      {
+        name: "Исследовательский узелок", req: 4, uiIcon: "Исследовательский узелок.png",
+        items: [
+          { id: "bu13", name: "Фиолетовый гриб", where: "Шахта (81+ ур.), пещера с грибами" },
+          { id: "bu14", name: "Раковина наутилуса", where: "Пляж зимой" },
+          { id: "bu15", name: "Голавль", where: "Река и горное озеро, весь год" },
+          { id: "bu16", name: "Морозная жеода", where: "Шахта (41–79 ур.)" }
+        ],
+        rewardName: "Утилизационная машина (1)", rewardWiki: "Утилизационная_машина", rewardFile: "Утилизационная машина"
+      },
+      {
+        name: "Кормовой узелок", req: 3, uiIcon: "Кормовой узелок.png",
+        items: [
+          { id: "bu17", name: "Пшеница (10)", file: "Пшеница", wiki: "Пшеница", where: "Летняя / осенняя культура (4 дня)" },
+          { id: "bu18", name: "Сено (10)", file: "Сено", wiki: "Сено", where: "Ранчо Марни, скашивание травы с силосной башней" },
+          { id: "bu19", name: "Яблоко (3)", file: "Яблоко", wiki: "Яблоко", where: "Яблоня осенью, пещера (мыши)" }
+        ],
+        rewardName: "Обогреватель (1)", rewardWiki: "Обогреватель", rewardFile: "Обогреватель"
+      },
+      {
+        name: "Узелок волшебника", req: 4, uiIcon: "Узелок волшебника.png",
+        items: [
+          { id: "bu20", name: "Дубовая смола", where: "Подсочник на дубе" },
+          { id: "bu21", name: "Вино", where: "Бочонок (любой фрукт)" },
+          { id: "bu22", name: "Кроличья лапка", where: "Кролики, змеи в Пещере Черепа" },
+          { id: "bu23", name: "Гранат", where: "Гранат осенью, пещера (мыши)" }
+        ],
+        rewardName: "Золотой слиток (5)", rewardWiki: "Золотой_слиток", rewardFile: "Золотой слиток"
+      }
+    ]
+  },
+  vault: {
+    title: "Сейф",
+    roomRewardName: "Ремонт автобуса (Пустыня Калико)",
+    roomRewardWiki: "Пустыня_Калико",
+    folder: "Сейф",
+    ext: "png",
+    bundles: [
+      {
+        name: "Узелок 2 500 з.", req: 1, uiIcon: "2500 з..png",
+        items: [{ id: "v1", name: "2 500 золота", customImg: "img/ui/2500 з..png", wiki: "Золото", where: "Покупка за золото в клубе" }],
+        rewardName: "Шоколадный торт (3)", rewardWiki: "Шоколадный_торт", rewardFile: "Шоколадный торт"
+      },
+      {
+        name: "Узелок 5 000 з.", req: 1, uiIcon: "5000 з..png",
+        items: [{ id: "v2", name: "5 000 золота", customImg: "img/ui/5000 з..png", wiki: "Золото", where: "Покупка за золото в клубе" }],
+        rewardName: "Высококачественное удобрение (30)", rewardWiki: "Высококачественное_удобрение", rewardFile: "Высококачественное удобрение"
+      },
+      {
+        name: "Узелок 10 000 з.", req: 1, uiIcon: "10000 з..png",
+        items: [{ id: "v3", name: "10 000 золота", customImg: "img/ui/10000 з..png", wiki: "Золото", where: "Покупка за золото в клубе" }],
+        rewardName: "Громоотвод (1)", rewardWiki: "Громоотвод", rewardFile: "Громоотвод"
+      },
+      {
+        name: "Узелок 25 000 з.", req: 1, uiIcon: "25000 з..png",
+        items: [{ id: "v4", name: "25 000 золота", customImg: "img/ui/25000 з..png", wiki: "Золото", where: "Покупка за золото в клубе" }],
+        rewardName: "Кристалляриум (1)", rewardWiki: "Кристалляриум", rewardFile: "Кристалляриум"
+      }
+    ]
+  },
+  joja: {
+    title: "Заброшенный ДжоджаМарт",
+    roomRewardName: "Кинотеатр",
+    roomRewardWiki: "Кинотеатр",
+    folder: "Заброшенный ДжоджаМарт",
+    ext: "png",
+    bundles: [
+      {
+        name: "Пропавший узелок", req: 5, uiIcon: "Пропавший узелок.png",
+        items: [
+          { id: "j1", name: "Любое вино серебряного качества и выше", file: "вино", wiki: "Вино", quality: "silver", where: "Подвал (бочка), Пляжный курорт" },
+          { id: "j2", name: "Динозавровый майонез", where: "Майонезный автомат (яйцо динозавра)" },
+          { id: "j3", name: "Радужный осколок", where: "Шахта, Пещера Черепа, Омнижеоды" },
+          { id: "j4", name: "Древний плод (5)", file: "Древний плод", wiki: "Древний_плод", quality: "gold", where: "5 шт. золотого качества" },
+          { id: "j5", name: "Лосось пустоты", quality: "gold", where: "Болото ведьмы (золотого качества)" },
+          { id: "j6", name: "Черная икра", wiki: "Чёрная_икра", where: "Кадка (из икры осетра)" }
+        ]
+      }
+    ]
+  }
+};
+
+let checkedItems = JSON.parse(localStorage.getItem("sv_checked_v3") || "{}");
+let activeRoomKey = null;
+
+function isRoomComplete(roomKey) {
+  return ROOMS[roomKey].bundles.every(b => {
+    const done = b.items.filter(it => checkedItems[it.id]).length;
+    return done >= b.req;
+  });
+}
+
+function updateMapOverlays() {
+  Object.keys(ROOMS).forEach(rKey => {
+    const complete = isRoomComplete(rKey);
+    const ov = document.getElementById("ov-" + rKey);
+    const box = document.getElementById("box-" + rKey);
+    if (ov) ov.classList.toggle("restored", complete);
+    if (box) box.classList.toggle("completed-box", complete);
+  });
+}
+
+function toggleItem(itemId) {
+  checkedItems[itemId] = !checkedItems[itemId];
+  localStorage.setItem("sv_checked_v3", JSON.stringify(checkedItems));
+  renderModalContent();
+  updateMapOverlays();
+}
+
+function openRoomModal(roomKey) {
+  activeRoomKey = roomKey;
+  renderModalContent();
+  document.getElementById("roomModal").classList.add("open");
+}
+
+function closeRoomModal() {
+  document.getElementById("roomModal").classList.remove("open");
+}
+
+function renderModalContent() {
+  if (!activeRoomKey) return;
+  const room = ROOMS[activeRoomKey];
+  document.getElementById("modalTitle").textContent = room.title;
+  document.getElementById("modalRoomReward").innerHTML = `Награда за комнату: <a href="${WIKI_BASE}${room.roomRewardWiki}" target="_blank">${room.roomRewardName}</a>`;
+
+  let html = "";
+
+  room.bundles.forEach(b => {
+    const doneCount = b.items.filter(it => checkedItems[it.id]).length;
+    const isDone = doneCount >= b.req;
+
+    html += `<div class="bundle-section">
+      <div class="bundle-header-row">
+        <img src="img/ui/${b.uiIcon}" class="bundle-icon-ui">
+        <span class="bundle-title">${b.name}</span>
+        <span class="bundle-progress-badge" style="color:${isDone ? '#15803d' : '#7c2d12'}">
+          ${Math.min(doneCount, b.req)} / ${b.req} ${isDone ? '✓' : ''}
+        </span>
+      </div>
+      <div class="items-grid">`;
+
+    b.items.forEach(it => {
+      const isChecked = !!checkedItems[it.id];
+      const baseName = it.file || it.name.replace(/\s*\(\d+\)/g, '').trim();
+      const wikiSlug = it.wiki || baseName.replace(/\s+/g, '_');
+      const primaryImg = it.customImg || `img/${room.folder}/${baseName}.${room.ext}`;
+      const altExt = room.ext === "png" ? "webp" : "png";
+      const fallbackImg = it.customImg || `img/${room.folder}/${baseName}.${altExt}`;
+
+      let starHtml = "";
+      if (it.quality === "gold") {
+        starHtml = `<img src="img/Кладовая/звезда.png" class="quality-star">`;
+      } else if (it.quality === "silver") {
+        starHtml = `<img src="img/Заброшенный ДжоджаМарт/звезда с.png" class="quality-star">`;
+      }
+
+      html += `
+        <div class="item-row ${isChecked ? 'checked' : ''}">
+          <div class="item-icon-btn" onclick="toggleItem('${it.id}')" title="Отметить предмет">
+            <img src="${primaryImg}" class="main-sprite" onerror="this.onerror=null; this.src='${fallbackImg}';">
+            ${starHtml}
+            <span class="check-badge">✓</span>
+          </div>
+          <div class="item-details">
+            <a href="${WIKI_BASE}${wikiSlug}" target="_blank" class="item-link">${it.name}</a>
+            <div class="item-where">${it.where}</div>
+          </div>
+        </div>
+      `;
+    });
+
+    html += `</div>`;
+
+    if (b.rewardName && b.rewardFile) {
+      const rewImg1 = `img/${room.folder}/${b.rewardFile}.${room.ext}`;
+      const altExt = room.ext === "png" ? "webp" : "png";
+      const rewImg2 = `img/${room.folder}/${b.rewardFile}.${altExt}`;
+      html += `
+        <div class="bundle-reward-footer">
+          <img src="img/ui/Награда.webp" class="reward-icon-sm">
+          <span>Награда:</span>
+          <img src="${rewImg1}" class="reward-icon-sm" onerror="this.onerror=null; this.src='${rewImg2}';">
+          <a href="${WIKI_BASE}${b.rewardWiki}" target="_blank" class="reward-link">${b.rewardName}</a>
+        </div>
+      `;
+    }
+
+    html += `</div>`;
+  });
+
+  document.getElementById("modalBody").innerHTML = html;
+}
+
+updateMapOverlays();
+</script>
+</body>
+</html>
